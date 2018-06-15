@@ -136,6 +136,7 @@ const deserialize = (str) => {
 
 const HTTPResponseHandler = (res, url) => {
     // Chasqui specific
+    if(!url) return new Promise((resolve, reject) => resolve(res))
     if (!!url.match(/chasqui.uport.me/g)) {
       return new Promise((resolve, reject) => {
         nets({
@@ -271,14 +272,20 @@ class UPortClient {
           DDO.image = { contentUrl: img }
           resolve(DDO)
         } else {
-          fs.readFile(imgPath, (err, data) => {
-            if (err) reject(new Error(err))
-            this.ipfs.files.add(data, (err, result) => {
-              if (err) reject(new Error(err))
-              const imgHash = result[0].hash
-              DDO.image = { contentUrl: `/ipfs/${imgHash}` }
-              resolve(DDO)
-            })
+          fs.readFile(img, (err, data) => {
+            if (err) {
+              reject(new Error(err))
+            } else {
+              this.ipfs.files.add(data, (err, result) => {
+                if (err) {
+                  reject(new Error(err))
+                } else {
+                  const imgHash = result[0].hash
+                  DDO.image = { contentUrl: `/ipfs/${imgHash}` }
+                  resolve(DDO)
+                }
+              })
+            }
           })
         }
       } else {
@@ -449,16 +456,17 @@ class UPortClient {
 
   addAttestationRequestHandler(uri) {
     const params = getUrlParams(uri)
-    const attestations = params.attestations.isArray() ? params.attestations : [params.attestations]
+    const attestations = Array.isArray(params.attestations) ? params.attestations : [params.attestations]
 
-    for (jwt in attestations) {
+    for (let jwt in attestations) {
+      jwt = attestations[jwt]
       const json = decodeToken(jwt).payload
       const key = Object.keys(json.claim)[0]
 
       if (this.network) {
         this.verifyJWT(jwt).then(() => {
           this.credentials[key] ? this.credentials[key].append({jwt, json}) : this.credentials[key] = [{jwt, json}]
-        }).catch(reject)
+        }).catch(console.log)
       }
       // redundant
       this.credentials[key] ? this.credentials[key].append({jwt, json}) : this.credentials[key] = [{jwt, json}]
