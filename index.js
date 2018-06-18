@@ -245,7 +245,7 @@ class UPortClient {
   }
 
   initTokenSigner() {
-     const tokenSigner = new TokenSigner('ES256k', this.deviceKeys.privateKey)
+     const tokenSigner = new TokenSigner('ES256k', this.deviceKeys.privateKey.slice(2)) // Remove 0x prefix from private key
      this.signer = tokenSigner.sign.bind(tokenSigner)
   }
 
