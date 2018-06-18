@@ -475,6 +475,7 @@ class UPortClient {
   }
 
   consume(uri) {
+      this.consume = this.consume.bind(this); 
       if (isShareRequest(uri)) return this.shareRequestHandler(uri)
       if (isSimpleRequest(uri)) return this.simpleRequestHandler(uri)
       if (isTransactionRequest(uri)) return this.transactionRequestHandler(uri)
