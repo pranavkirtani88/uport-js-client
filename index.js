@@ -383,21 +383,51 @@ class UPortClient {
       })
     })
   }
+/*
+ requested parameter is passed so the user need not send all the requested attributes, but he can choose those attributes and
+ send the ones he wants to send while keeping rest private
 
-  shareRequestHandler(uri) {
+ This is to give user more control on which parameters he can send
+
+ Suppose an app requests 3 attributes and the user is not willing to share one of them, he may only send two as a parameter to this function
+*/
+  shareRequestHandler(uri,requested) {
     const params = getUrlParams(uri)
     // A shareReq in a token
     const token = decodeToken(params.requestToken).payload
-    const verified = filterCredentials(this.credentials, intersection(this.credentials, token.requested) )
+    var isRequested=requested.length>0;
+    var verified;
+    if(isRequested){
+      verified= filterCredentials(this.credentials, intersection(this.credentials, requested) )// Only the attributes which user is willing to share are sent
+    }
+    else{
+       verified= filterCredentials(this.credentials, intersection(this.credentials, token.requested) )
+    }
+    
     const req = params.requestToken
-    const info = intersection(this.info, token.requested)
-                 .reduce((infoReq, key) => {
-                   infoReq[key] = this.info[key]
-                   return infoReq
-                  }, {})
-    const payload = {...info, iss: this.address, iat: new Date().getTime(), verified, type: 'shareReq', req}
-    const response = this.signer(payload)
+    var response;
+    var info; 
+    if(isRequested){
+      info= intersection(this.info, requested)
+          .reduce((infoReq, key) => {
+              infoReq[key] = this.info[key]
+              return infoReq
+          }, {})
 
+    }
+    else{
+      info= intersection(this.info, token.requested)
+          .reduce((infoReq, key) => {
+              infoReq[key] = this.info[key]
+              return infoReq
+          }, {})
+
+    }
+          
+    const payload = {info, iss: this.mnid, iat: new Date().getTime(), verified, type: 'shareReq', req}
+    response = this.signer(payload)
+  
+    
     if (this.network) {
       return this.verifyJWT(params.requestToken).then(() => this.responseHandler(response, token.callbackUrl))
     }
@@ -476,8 +506,8 @@ class UPortClient {
     // TODO standard response?
   }
 
-  consume(uri) {
-      if (isShareRequest(uri)) return this.shareRequestHandler(uri)
+  consume(uri,requested) {
+      if (isShareRequest(uri)) return this.shareRequestHandler(uri,requested)
       if (isSimpleRequest(uri)) return this.simpleRequestHandler(uri)
       if (isTransactionRequest(uri)) return this.transactionRequestHandler(uri)
       if (isAddAttestationRequest(uri)) return this.addAttestationRequestHandler(uri)
