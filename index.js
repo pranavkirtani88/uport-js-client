@@ -134,7 +134,7 @@ const deserialize = (str) => {
   return uportClient
 }
 
-const HTTPResponseHandler = (res, url) => {
+const HTTPResponseHandler = (res, url,topicName) => {
     // Chasqui specific
     if(!url) return new Promise((resolve, reject) => resolve(res))
     if (!!url.match(/chasqui.uport.me/g)) {
@@ -147,16 +147,24 @@ const HTTPResponseHandler = (res, url) => {
           rejectUnauthorized: false
         }, (err, resp, body) => {
           if (err) reject(err)
-          post(res, url).then(resolve, reject)
+          post(res, url,topicName).then(resolve, reject)
         })
       })
     }
-    return post(res, url)
+    return post(res, url,topicName)
   }
 
-const post = (res, url) => new Promise((resolve, reject) => {
+const post = (res, url,topicName) => new Promise((resolve, reject) => {
+  var body={}
+  if(topicName){
+       body[topicName]=res;
+  }
+  else{
+    body["access_token"]=res;
+  }
+ 
   nets({
-    body: JSON.stringify({access_token: res}),
+    body: JSON.stringify(body),
     url: urlDecode(url),
     method: 'POST',
     headers: {
@@ -503,7 +511,10 @@ class UPortClient {
       // redundant
       this.credentials[key] ? this.credentials[key].append({jwt, json}) : this.credentials[key] = [{jwt, json}]
     }
-    // TODO standard response?
+    /** Returning a standard response, with a cutom topicName, as the client on other side expects status when polling for attestation request */
+    const payload={"message":"Attestation recieved"}
+    const response = this.signer(payload)
+    return this.responseHandler(response, params.callback_url,"status")
   }
 
   consume(uri,requested) {
