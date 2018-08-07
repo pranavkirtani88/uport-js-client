@@ -483,6 +483,20 @@ class UPortClient {
       if (isAddAttestationRequest(uri)) return this.addAttestationRequestHandler(uri)
       return Promise.reject(new Error('Invalid URI Passed'))
   }
+  rejectAttestation(uri){
+      const params = getUrlParams(uri)
+      const payload={"message":"Attestation Request Rejected"}
+      const response = this.signer(payload)
+      return this.responseHandler(response, params.callback_url,"status")
+  }
+
+  rejectRequest(uri){
+      const params = getUrlParams(uri)
+      const token = decodeToken(params.requestToken).payload
+      const payload={"message":"Request Rejected"}
+      const response = this.signer(payload)
+      return this.responseHandler(response, token.callback)
+  }
 }
 
 module.exports = { UPortClient, serialize, deserialize, networks, genKeyPair, deploy }
